@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.cfg
+setup.py
+src/idlealign/__init__.py
+src/idlealign.egg-info/PKG-INFO
+src/idlealign.egg-info/SOURCES.txt
+src/idlealign.egg-info/dependency_links.txt
+src/idlealign.egg-info/entry_points.txt
+src/idlealign.egg-info/top_level.txt

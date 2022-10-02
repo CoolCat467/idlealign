@@ -1,0 +1,45 @@
+Metadata-Version: 2.1
+Name: idlealign
+Version: 0.0.0
+Summary: Emacs Align by Regular Expression for IDLE
+Home-page: https://github.com/CoolCat467/idlealign
+Author: CoolCat467
+Project-URL: Bug Reports, https://github.com/CoolCat467/idlealign/issues
+Project-URL: Source, https://github.com/CoolCat467/idlealign
+Keywords: align,regex,idle,extension,development
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3 :: Only
+Requires-Python: >=3.6, <4
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# IDLEAlign
+Python IDLE extension to align code by text
+
+## Installation
+1) Go to terminal and install with `pip install typecheck`.
+2) Run command `typecheck`. You will likely see a message saying
+`typecheck not in system registered extensions!`. Run the command
+given to add lintcheck to your system's IDLE extension config file.
+3) Again run command `typecheck`. This time, you should see the following
+output: `Config should be good!`.
+4) Open IDLE, go to `Options` -> `Configure IDLE` -> `Extensions`.
+If everything went well, alongside `ZzDummy` there should be and
+option called `typecheck`. This is where you can configure how
+lintcheck works.
+
+### Information on options
+Option `ignore` is a list of pylint messages,
+seperated by semicolons (;) that should be disabled using `--disable`.
+See `pylint --help` for more information.
+
+Option `jobs` is the number of processes pylint should use when
+checking your code, using `--jobs`. See `pylint --help` for more information.
