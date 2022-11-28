@@ -4,9 +4,11 @@ Version: 0.0.1
 Summary: Emacs Align by Regular Expression for IDLE
 Home-page: https://github.com/CoolCat467/idlealign
 Author: CoolCat467
+License: UNKNOWN
 Project-URL: Bug Reports, https://github.com/CoolCat467/idlealign/issues
 Project-URL: Source, https://github.com/CoolCat467/idlealign
 Keywords: align,regex,idle,extension,development
+Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha
 Classifier: Intended Audience :: Developers
 Classifier: Topic :: Software Development :: Build Tools
@@ -34,3 +36,5 @@ output: `Config should be good!`.
 If everything went well, alongside `ZzDummy` there should be and
 option called `idlealign`. This is where you can configure if
 idlealign is enabled or not.
+
+

@@ -11,12 +11,12 @@ from __future__ import annotations
 __title__     = 'idlealign'
 __author__    = 'CoolCat467'
 __license__   = 'GPLv3'
-__version__   = '0.0.1'
+__version__   = '0.1.0'
 __ver_major__ = 0
-__ver_minor__ = 0
-__ver_patch__ = 1
+__ver_minor__ = 1
+__ver_patch__ = 0
 
-from typing import Optional
+from typing import Any, Optional, cast
 
 import sys
 from re import Pattern
@@ -24,10 +24,10 @@ from re import Pattern
 from tkinter            import BooleanVar, Event, TclError, Tk, Widget
 from tkinter.ttk        import Checkbutton, Frame, Label, Radiobutton
 
-from idlelib            import searchengine        # type: ignore
-from idlelib.config     import idleConf            # type: ignore
-from idlelib.pyshell    import PyShellEditorWindow # type: ignore
-from idlelib.searchbase import SearchDialogBase    # type: ignore
+from idlelib            import searchengine
+from idlelib.config     import idleConf
+from idlelib.pyshell    import PyShellEditorWindow
+from idlelib.searchbase import SearchDialogBase
 
 def check_installed() -> bool:
     "Make sure extension installed."
@@ -94,35 +94,6 @@ def ensure_values_exist_in_section(section: str, values: dict[str, str]) -> bool
             need_save = True
     return need_save
 
-##def setup(extension: 'idlealign') -> 'AlignDialog':
-##    """Return the new or existing singleton AlignDialog instance.
-##
-##    The singleton dialog saves user entries and preferences
-##    across instances.
-##
-##    Arguments:
-##        text: Text widget containing the text to be aligned.
-##    """
-##    text: Widget = extension.text
-##    root: Tk
-##    root = text._root()# type: ignore
-##
-##    engine: searchengine.SearchEngine = searchengine.get(root)
-##    if not hasattr(engine, '_aligndialog'):
-##        engine._aligndialog = AlignDialog(root, engine, extension)
-##    return engine._aligndialog
-##
-####def align_selection(text: Widget) -> None:
-##    """Align by the selected pattern in the text.
-##
-##    Module-level function to access the singleton AlignDialog
-##    instance to align again using the user entries and preferences
-##    from the last dialog.  If there was no prior alignment, open the
-##    align dialog; otherwise, perform the alignment without showing the
-##    dialog.
-##    """
-##    setup(text).open(text)
-
 def get_search_engine_params(engine: searchengine.SearchEngine) -> dict[str, str | bool]:
     "Get current search engine parameters"
     return {
@@ -132,7 +103,7 @@ def get_search_engine_params(engine: searchengine.SearchEngine) -> dict[str, str
 
 def set_search_engine_params(engine: searchengine.SearchEngine,
                              data: dict[str, str | bool]) -> None:
-    "Get current search engine parameters"    
+    "Get current search engine parameters"
     for name in ('pat', 're', 'case', 'word', 'wrap', 'back'):
         if name in data:
             getattr(engine, f'{name}var').set(data[name])
@@ -163,26 +134,26 @@ class AlignDialog(SearchDialogBase):
 
         self.space_wrap_var = BooleanVar(root, True) # Space wrap alignment pattern?
         self.align_side_var = BooleanVar(root, False) # Alignment side var
-        
+
         self.extension = extension
-        
+
         self.global_search_params: dict[str, str | bool]
         self.search_params: dict[str, str | bool] = {
             'wrap': False,
             'back': False
         }
-    
+
     def load_prefs(self) -> None:
-        "Load search engine prefrences"
+        "Load search engine preferences"
         self.global_search_params = get_search_engine_params(self.engine)
         set_search_engine_params(self.engine, self.search_params)
-    
+
     def store_prefs(self) -> None:
-        "Restore global search engine prefrences"
+        "Restore global search engine preferences"
         self.search_params = get_search_engine_params(self.engine)
         set_search_engine_params(self.engine, self.global_search_params)
 
-    def open(self,
+    def open(self,  # type: ignore[override]
              searchphrase: Optional[str] = None,
              insert_tags : Optional[str] = None) -> None:
         """Make dialog visible on top of others and ready to use.
@@ -195,7 +166,7 @@ class AlignDialog(SearchDialogBase):
         self.load_prefs()
 
         text = self.extension.text
-        
+
         try:
             first = text.index("sel.first")
         except TclError:
@@ -206,25 +177,25 @@ class AlignDialog(SearchDialogBase):
             last = None
         first = first or text.index("insert")
         last = last or first
-        
+
         if first is None or last is None:
             self.bell()
             self.store_prefs()
             return
-        
+
         super().open(text, searchphrase)
-        
+
         self.extension.show_hit(first, last)
-        
+
         self.insert_tags = insert_tags
 
-    def close(self, event: Event=None) -> None:
+    def close(self, event: Event[Any] | None=None) -> None:
         "Close the dialog and remove hit tags."
         super().close(event)
-        
-        # Restore global search engine prefrences
+
+        # Restore global search engine preferences
         self.store_prefs()
-        
+
         self.extension.hide_hit()
         self.insert_tags = None
 
@@ -242,7 +213,7 @@ class AlignDialog(SearchDialogBase):
             base_options.append((var, label))
         return frame, base_options
 
-    def create_other_buttons(self) -> None:
+    def create_other_buttons(self) -> tuple[Frame, list[tuple[bool, str]]]:
         "Override so Search Direction is instead Alignment Side"
         frame = self.make_frame('Alignment Side')[0]
         var = self.align_side_var
@@ -257,7 +228,7 @@ class AlignDialog(SearchDialogBase):
         super().create_command_buttons()
         self.make_button("Align", self.default_command, isdef=True)
 
-    def default_command(self, event: Event = None) -> bool:
+    def default_command(self, event: Event[Any] | None = None) -> bool:
         "Handle align again as the default command."
         if not self.engine.getpat():
             self.open()
@@ -266,14 +237,14 @@ class AlignDialog(SearchDialogBase):
         pattern = self.engine.getprog()
         if not pattern:
             return False
-        
+
         space_wrap: bool = self.space_wrap_var.get()
         align_side: bool = self.align_side_var.get()
-        
+
         close = self.extension.align_selected(
             pattern, space_wrap, align_side, self.insert_tags
         )
-        
+
         if close:
             # Close window
             self.close()
@@ -295,8 +266,7 @@ class idlealign:# pylint: disable=invalid-name
     "Add comments from mypy to an open program."
     __slots__ = (
         'editwin',
-        'text',
-        'window'
+        'text'
     )
     # Extend the file and format menus.
     menudefs = [
@@ -319,12 +289,16 @@ class idlealign:# pylint: disable=invalid-name
         "Initialize the settings for this extension."
         self.editwin      = editwin
         self.text: Widget = editwin.text
-        self.window       = self.create_window()
 
         for attrname in (a for a in dir(self) if not a.startswith('_')):
             if attrname.endswith('_event'):
                 bind_name = '_'.join(attrname.split('_')[:-1]).lower()
                 self.text.bind(f'<<{bind_name}>>', getattr(self, attrname))
+
+    @property
+    def window(self) -> AlignDialog:
+        "Window for current text widget"
+        return self.create_window()
 
     @classmethod
     def ensure_bindings_exist(cls) -> bool:
@@ -369,14 +343,14 @@ class idlealign:# pylint: disable=invalid-name
     def create_window(self) -> AlignDialog:
         "Create window"
         root: Tk
-        root = self.text._root()# type: ignore
+        root = self.text._root()
 
         engine: searchengine.SearchEngine = searchengine.get(root)
 
         if not hasattr(engine, '_aligndialog'):
             engine._aligndialog = AlignDialog(root, engine, self)
-        return engine._aligndialog
-    
+        return cast(AlignDialog, engine._aligndialog)
+
     def show_hit(self, first: str, last: str) -> None:
         """Highlight text between first and last indices.
 
@@ -386,7 +360,7 @@ class idlealign:# pylint: disable=invalid-name
         The colors from the 'hit' tag aren't currently shown
         when the text is displayed.  This is due to the 'sel'
         tag being added first, so the colors in the 'sel'
-        config are seen instead of the colors for 'hit'.
+        configuration are seen instead of the colors for 'hit'.
         """
         text = self.text
         text.mark_set("insert", first)
@@ -399,13 +373,13 @@ class idlealign:# pylint: disable=invalid-name
             text.tag_add("hit", first, last)
         text.see("insert")
         text.update_idletasks()
-    
+
     def hide_hit(self) -> None:
-        "Hide hit aftere show_hit"
+        "Hide hit after show_hit"
         self.text.tag_remove("hit", "1.0", "end")
-    
+
     def align_selected(self,
-                       pattern: Pattern,
+                       pattern: Pattern[str],
                        space_wrap: bool = True,
                        align_side: bool = False,
                        tags: Optional[str] = None) -> bool:
@@ -430,21 +404,21 @@ class idlealign:# pylint: disable=invalid-name
         for idx, line in enumerate(lines):
             # Regular expression match
             match = pattern.search(line)
-            
+
             if match is None:# If align pattern not in line, skip line
                 continue
-            
+
             # Get the where alignment pattern starts and ends at
             start, end = match.span()
-            
+
             prefix = line[:start]
             align = line[start:end]
             suffix = line[end:]
-            
+
             # If space wrap is set, wrap alignment text with spaces
             if space_wrap:
                 align = f' {align} '
-            
+
             if not align_side: # If align to left side
                 # Strip trailing spaces before align but keep indent
                 prefix = prefix.rstrip()
@@ -452,7 +426,7 @@ class idlealign:# pylint: disable=invalid-name
             else: # If align to right side
                 prefix += align.lstrip()
                 suffix = suffix.lstrip()
-            
+
             line_data[idx] = (prefix, suffix) # Remember after we get max
 
             sec_start = max(sec_start, len(prefix)) # Update max
@@ -476,7 +450,7 @@ class idlealign:# pylint: disable=invalid-name
         if not changed:
             # There was no change so stop
             return False
-        
+
         # Add extra blank line because of how insert works
         lines.append('')
         # Re-get characters to set
@@ -495,8 +469,9 @@ class idlealign:# pylint: disable=invalid-name
         self.show_hit(select_start, select_end)
         return True
 
-    def align_selection_event(self, event: Event) -> str:
+    def align_selection_event(self, event: Event[Any] | None) -> str:
         "Align selected text"
+        # pylint: disable=unused-argument
         self.reload()
 
         self.window.open()
