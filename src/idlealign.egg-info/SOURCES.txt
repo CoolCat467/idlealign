@@ -1,7 +1,6 @@
 LICENSE
 README.md
-setup.cfg
-setup.py
+pyproject.toml
 src/idlealign/__init__.py
 src/idlealign.egg-info/PKG-INFO
 src/idlealign.egg-info/SOURCES.txt
