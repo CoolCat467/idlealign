@@ -154,6 +154,8 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
         "align_side_var",
         "extension",
         "prev_search_params",
+        "space_wrap_var",
+        "global_search_params",
     )
     title = "Align Dialog"
     icon = "Align"
@@ -405,8 +407,8 @@ class idlealign:  # noqa: N801  # Class name must match extension module name
         engine: searchengine.SearchEngine = searchengine.get(root)
 
         if not hasattr(engine, "_aligndialog"):
-            engine._aligndialog = AlignDialog(root, engine, self)  # type: ignore[attr-defined]
-        return cast(AlignDialog, engine._aligndialog)  # type: ignore[attr-defined]
+            engine._aligndialog = AlignDialog(root, engine, self)
+        return cast(AlignDialog, engine._aligndialog)
 
     def show_hit(self, first: str, last: str) -> None:
         """Highlight text between first and last indices.
