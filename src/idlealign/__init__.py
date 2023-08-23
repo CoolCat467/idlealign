@@ -155,6 +155,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
         "extension",
         "prev_search_params",
         "space_wrap_var",
+        "search_params",
         "global_search_params",
     )
     title = "Align Dialog"
