@@ -207,7 +207,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
         self.search_params = get_search_engine_params(self.engine)
         set_search_engine_params(self.engine, self.global_search_params)
 
-    def open(  # noqa: A003,D417  # Override for superclass we don't control
+    def open(  # noqa: A003  # Override for superclass we don't control
         self,
         searchphrase: str | None = None,
         insert_tags: str | list[str] | tuple[str, ...] = (),
