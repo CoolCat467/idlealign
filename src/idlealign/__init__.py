@@ -50,8 +50,18 @@ def get_required_config(
 def check_installed() -> bool:
     """Make sure extension installed."""
     # Get list of system extensions
-    extensions = list(idleConf.defaultCfg["extensions"])
+    extensions = set(idleConf.defaultCfg["extensions"])
+
+    # Do we have the user extend extension?
+    has_user = "idleuserextend" in idleConf.GetExtensions(active_only=True)
+
+    # If we don't, things get messy and we need to change the root config file
     ex_defaults = idleConf.defaultCfg["extensions"].file
+    if has_user:
+        # Otherwise, idleuserextend patches IDLE and we only need to modify
+        # the user config file
+        ex_defaults = idleConf.userCfg["extensions"].file
+        extensions |= set(idleConf.userCfg["extensions"])
 
     # Import this extension (this file),
     module = __import__(__title__)
@@ -85,8 +95,10 @@ def check_installed() -> bool:
         # Make sure line-breaks will go properly in terminal
         add_data = required_config.replace("\n", "\\n")
         # Tell them the command
-        print(f"echo -e '{add_data}' | sudo tee -a {ex_defaults}")
-        print()
+        append = "| sudo tee -a"
+        if has_user:
+            append = ">>"
+        print(f"echo -e '{add_data}' {append} {ex_defaults}\n")
     else:
         print(f"Configuration should be good! (v{__version__})")
         return True
@@ -356,6 +368,9 @@ class idlealign:  # noqa: N801  # Class name must match extension module name
 
         Return True if need to save.
         """
+        if not cls.bind_defaults:
+            return False
+
         need_save = False
         section = f"{cls.__name__}_cfgBindings"
         if ensure_section_exists(section):
@@ -379,11 +394,11 @@ class idlealign:  # noqa: N801  # Class name must match extension module name
 
     @classmethod
     def reload(cls) -> None:
-        """Load class variables from the extension settings."""
-        # # Ensure file default values exist so they appear in settings menu
-        # save = cls.ensure_config_exists()
-        # if cls.ensure_bindings_exist() or save:
-        #     idleConf.SaveUserCfgFiles()
+        """Load class variables from configuration."""
+        # Ensure file default values exist so they appear in settings menu
+        save = cls.ensure_config_exists()
+        if cls.ensure_bindings_exist() or save:
+            idleConf.SaveUserCfgFiles()
 
         # Reload configuration file
         idleConf.LoadCfgFiles()

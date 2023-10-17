@@ -29,6 +29,9 @@ classifiers = [
 ]
 keywords = ["align", "regex", "idle", "extension", "development"]
 
+[project.optional-dependencies]
+user = ["idleuserextend~=0.0.0"]
+
 [project.urls]
 "Homepage" = "https://github.com/CoolCat467/idlealign"
 "Source" = "https://github.com/CoolCat467/idlealign"
@@ -63,7 +66,6 @@ warn_unused_ignores = true
 [tool.black]
 line-length = 79
 target-version = ['py310']
-
 
 [tool.ruff.isort]
 combine-as-imports = true
