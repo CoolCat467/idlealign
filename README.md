@@ -1,6 +1,13 @@
 # IDLEAlign
 Python IDLE extension to align code by a regular expression
 
+<!-- BADGIE TIME -->
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![code style: black](https://img.shields.io/badge/code_style-black-000000.svg)](https://github.com/psf/black)
+
+<!-- END BADGIE TIME -->
+
 ## Installation
 1) Go to terminal and install with `pip install idlealign`.
 2) Run command `idlealign`. You will likely see a message saying
