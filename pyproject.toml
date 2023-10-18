@@ -41,7 +41,7 @@ user = ["idleuserextend~=0.0.0"]
 idlealign = "idlealign:check_installed"
 
 [tool.setuptools.package-data]
-sanescansrv = ["py.typed"]
+idlealign = ["py.typed"]
 
 [tool.mypy]
 mypy_path = "src"
