@@ -8,20 +8,20 @@ __title__ = "idlealign"
 __author__ = "CoolCat467"
 __license__ = "GPLv3"
 __version__ = "0.1.1"
-__ver_major__ = 0
-__ver_minor__ = 1
-__ver_patch__ = 1
 
 import sys
-from re import Pattern
 from tkinter import BooleanVar, Event, Frame, TclError, Text, Tk, Variable
 from tkinter.ttk import Checkbutton, Radiobutton
-from typing import Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from idlelib import searchengine
 from idlelib.config import idleConf
-from idlelib.pyshell import PyShellEditorWindow
 from idlelib.searchbase import SearchDialogBase
+
+if TYPE_CHECKING:
+    from re import Pattern
+
+    from idlelib.pyshell import PyShellEditorWindow
 
 
 def get_required_config(
@@ -191,6 +191,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
             insert_tags: Optional string of tags for text insert
             extension: Extension class
             prev_search_params: Dictionary of search parameters before opening window
+
         """
         super().__init__(root, engine)
         self.insert_tags: str | list[str] | tuple[str, ...] = ()
@@ -219,7 +220,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
         self.search_params = get_search_engine_params(self.engine)
         set_search_engine_params(self.engine, self.global_search_params)
 
-    def open(  # noqa: A003  # Override for superclass we don't control
+    def open(
         self,
         searchphrase: str | None = None,
         insert_tags: str | list[str] | tuple[str, ...] = (),
@@ -232,6 +233,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
         ---------
             searchphrase: Search phrase to look for or existing phrase.
             insert_tags: Tags to use when inserting text.
+
         """
         self.load_prefs()
 
