@@ -1,2 +1,0 @@
-[console_scripts]
-idlealign = idlealign:check_installed
