@@ -22,7 +22,7 @@ from __future__ import annotations
 __title__ = "idlealign"
 __author__ = "CoolCat467"
 __license__ = "GNU General Public License Version 3"
-__version__ = "0.1.1"
+__version__ = "1.0.0"
 
 
 from idlealign import utils
