@@ -26,16 +26,14 @@ __license__ = "GNU General Public License Version 3"
 
 import sys
 from contextlib import contextmanager
+from idlelib import search, searchengine
+from idlelib.config import idleConf
 from os.path import abspath
 from tkinter import TclError, Text, Tk, messagebox
 from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
-from idlelib import search, searchengine
-from idlelib.config import idleConf
-
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
-
     from idlelib.editor import EditorWindow
     from idlelib.format import FormatRegion
     from idlelib.iomenu import IOBinding

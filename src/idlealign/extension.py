@@ -23,12 +23,11 @@ __title__ = "extension"
 __author__ = "CoolCat467"
 __license__ = "GNU General Public License Version 3"
 
+from idlelib import searchengine
+from idlelib.searchbase import SearchDialogBase
 from tkinter import BooleanVar, Event, Frame, Tk, Variable
 from tkinter.ttk import Checkbutton, Radiobutton
 from typing import TYPE_CHECKING, Any, ClassVar, cast
-
-from idlelib import searchengine
-from idlelib.searchbase import SearchDialogBase
 
 from idlealign import utils
 
