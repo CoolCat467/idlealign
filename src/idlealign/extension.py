@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from re import Pattern
 
 
-class AlignDialog(SearchDialogBase):  # type: ignore[misc]
+class AlignDialog(SearchDialogBase):
     """Dialog for aligning by a pattern in text."""
 
     __slots__ = (
@@ -100,7 +100,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
         self.search_params = utils.get_search_engine_params(self.engine)
         utils.set_search_engine_params(self.engine, self.global_search_params)
 
-    def open(
+    def open(  # type: ignore  # "override"
         self,
         searchphrase: str | None = None,
         insert_tags: str | list[str] | tuple[str, ...] = (),
@@ -173,7 +173,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc]
 
         pattern = self.engine.getprog()
         if not pattern:
-            return False
+            return False  # type: ignore  # "unreachable"
 
         space_wrap: bool = self.space_wrap_var.get()
         align_side: bool = self.align_side_var.get()
@@ -220,6 +220,7 @@ class idlealign(utils.BaseExtension):  # noqa: N801
         """Window for current text widget."""
         return self.create_window()
 
+    @utils.log_exceptions
     def create_window(self) -> AlignDialog:
         """Create align dialog window."""
         root: Tk
@@ -228,9 +229,17 @@ class idlealign(utils.BaseExtension):  # noqa: N801
         engine: searchengine.SearchEngine = searchengine.get(root)
 
         if not hasattr(engine, "_aligndialog"):
-            engine._aligndialog = AlignDialog(root, engine, self)
-        return cast(AlignDialog, engine._aligndialog)
+            engine._aligndialog = AlignDialog(  # type: ignore[attr-defined]
+                root,
+                engine,
+                self,
+            )
+        return cast(
+            AlignDialog,
+            engine._aligndialog,  # type: ignore[attr-defined]
+        )
 
+    @utils.log_exceptions
     def align_selection(
         self,
         selection: tuple[str, str],
