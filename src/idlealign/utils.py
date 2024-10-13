@@ -338,13 +338,13 @@ def log_exceptions(function: Callable[PS, T]) -> Callable[PS, T]:
         """Catch Exceptions, log them to log file, and re-raise."""
         try:
             return function(*args, **kwargs)
-        except Exception as exc:
+        except Exception:
             if not LOGS_PATH.exists():
                 LOGS_PATH.mkdir(exist_ok=True)
             log_file = LOGS_PATH / f"{TITLE}.log"
             with log_file.open("a", encoding="utf-8") as fp:
                 format_time = time.strftime("[%Y-%m-%d %H:%M:%S] ")
-                exception_text = "".join(traceback.format_exception(exc))
+                exception_text = "".join(traceback.format_exc())
                 for line in exception_text.splitlines(keepends=True):
                     fp.write(f"{format_time}{line}")
             raise
