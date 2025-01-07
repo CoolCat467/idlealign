@@ -39,14 +39,14 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc,unused-ignore]
     """Dialog for aligning by a pattern in text."""
 
     __slots__ = (
-        "insert_tags",
         "align_side_var",
         "extension",
-        "prev_search_params",
-        "space_wrap_var",
-        "search_params",
         "global_search_params",
+        "insert_tags",
+        "prev_search_params",
+        "search_params",
         "selection",
+        "space_wrap_var",
     )
     title = "Align Dialog"
     icon = "Align"
