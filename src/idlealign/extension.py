@@ -235,7 +235,7 @@ class idlealign(utils.BaseExtension):  # noqa: N801
                 self,
             )
         return cast(
-            AlignDialog,
+            "AlignDialog",
             engine._aligndialog,  # type: ignore[attr-defined,unused-ignore]
         )
 
