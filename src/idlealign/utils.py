@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 # IDLE Extension Utilities
-# Copyright (C) 2023-2024  CoolCat467
+# Copyright (C) 2023-2025  CoolCat467
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -91,7 +91,7 @@ def check_installed(
     version: str,
     cls: type[BaseExtension] | None,
 ) -> bool:
-    """Make sure extension installed."""
+    """Make sure extension installed. Return True if installed correctly."""
     # Get list of system extensions
     extensions = set(idleConf.defaultCfg["extensions"])
 
@@ -154,7 +154,7 @@ def check_installed(
 
 def get_line_selection(line: int, length: int = 1) -> tuple[str, str]:
     """Get selection strings for given line(s)."""
-    return f"{line}.0", f"{line+length}.0"
+    return f"{line}.0", f"{line + length}.0"
 
 
 # Stolen from idlelib.searchengine
@@ -198,7 +198,7 @@ def set_insert_and_move(text: Text, index: str) -> None:
     text.update_idletasks()
 
 
-def higlight_region(text: Text, tag: str, first: str, last: str) -> None:
+def highlight_region(text: Text, tag: str, first: str, last: str) -> None:
     """Add a given tag to the region of text between first and last indices."""
     if first == last:
         text.tag_add(tag, first)
@@ -223,7 +223,7 @@ def show_hit(text: Text, first: str, last: str) -> None:
     beforehand.
     """
     text.tag_remove("sel", "1.0", "end")
-    higlight_region(text, "hit", first, last)
+    highlight_region(text, "hit", first, last)
 
     set_insert_and_move(text, first)
 
@@ -241,6 +241,16 @@ def get_line_indent(text: str, char: str = " ") -> int:
         if cur_char != char:
             return index
     return index + 1
+
+
+def get_line_indent_handle_tabs(text: str) -> tuple[bool, int]:
+    """Return if uses tabs and associated indentation level."""
+    uses_tabs = text.startswith("\t")
+    if uses_tabs:
+        indent = get_line_indent(text, "\t")
+    else:
+        indent = get_line_indent(text)
+    return uses_tabs, indent
 
 
 def ensure_section_exists(section: str) -> bool:
@@ -330,6 +340,45 @@ def undo_block(undo: UndoDelegator) -> Generator[None, None, None]:
         undo.undo_block_stop()
 
 
+@contextmanager
+def temporary_overwrite(
+    object_: object,
+    attribute: str,
+    value: object,
+) -> Generator[None, None, None]:
+    """Temporarily overwrite object_.attribute with value, restore on exit."""
+    if not hasattr(object_, attribute):
+        yield None
+    else:
+        original = getattr(object_, attribute)
+        setattr(object_, attribute, value)
+        try:
+            yield None
+        finally:
+            setattr(object_, attribute, original)
+
+
+def extension_log(content: str) -> None:
+    """Log content to extension log."""
+    if not LOGS_PATH.exists():
+        LOGS_PATH.mkdir(exist_ok=True)
+    log_file = LOGS_PATH / f"{TITLE}.log"
+    with log_file.open("a", encoding="utf-8") as fp:
+        format_time = time.strftime("[%Y-%m-%d %H:%M:%S] ")
+        for line in content.splitlines(keepends=True):
+            fp.write(f"{format_time}{line}")
+        if not line.endswith("\n"):
+            fp.write("\n")
+
+
+def extension_log_exception(exc: BaseException, print_: bool = True) -> None:
+    """Log exception to extension log."""
+    exception_text = "".join(traceback.format_exception(exc))
+    extension_log(exception_text)
+    if print_:
+        print(exception_text, file=sys.stderr)
+
+
 def log_exceptions(function: Callable[PS, T]) -> Callable[PS, T]:
     """Log any exceptions raised."""
 
@@ -338,15 +387,8 @@ def log_exceptions(function: Callable[PS, T]) -> Callable[PS, T]:
         """Catch Exceptions, log them to log file, and re-raise."""
         try:
             return function(*args, **kwargs)
-        except Exception:
-            if not LOGS_PATH.exists():
-                LOGS_PATH.mkdir(exist_ok=True)
-            log_file = LOGS_PATH / f"{TITLE}.log"
-            with log_file.open("a", encoding="utf-8") as fp:
-                format_time = time.strftime("[%Y-%m-%d %H:%M:%S] ")
-                exception_text = "".join(traceback.format_exc())
-                for line in exception_text.splitlines(keepends=True):
-                    fp.write(f"{format_time}{line}")
+        except Exception as exc:
+            extension_log_exception(exc)
             raise
 
     return wrapper
@@ -464,6 +506,10 @@ class BaseExtension:
                 )
                 setattr(cls, key, value)
 
+    def get_tabwidth_indent_spaces(self) -> str:
+        """Return tabwidth indent as spaces."""
+        return " " * self.editwin.get_tk_tabwidth()
+
     def get_line(
         self,
         line: int,
@@ -474,6 +520,32 @@ class BaseExtension:
             text_win = self.text
         chars: str = text_win.get(*get_line_selection(line))
         return chars
+
+    def get_line_replace_tabs(
+        self,
+        line: int,
+        text_win: Text | None = None,
+    ) -> tuple[bool, str]:
+        """Return if line uses tabs and line using spaces."""
+        chars = self.get_line(line, text_win)
+        if chars.startswith("\t"):
+            return True, chars.replace("\t", self.get_tabwidth_indent_spaces())
+        return False, chars
+
+    def reinstate_line_tabs(self, line: str) -> str:
+        """Return line with leading indent replaced with tabs."""
+        indent = get_line_indent(line)
+        indent_text = line[:indent]
+        post_indent = line[indent:]
+        return (
+            indent_text.replace(self.get_tabwidth_indent_spaces(), "\t")
+            + post_indent
+        )
+
+    def reinstate_char_tabs(self, chars: str) -> str:
+        """Return potentially multiline string with indentation replaced with tabs."""
+        lines = chars.splitlines(keepends=True)
+        return "".join(map(self.reinstate_line_tabs, lines))
 
     def get_comment_line(self, indent: int, content: str) -> str:
         """Return comment line given indent and content."""
@@ -527,13 +599,15 @@ class BaseExtension:
                 return False
 
         # Get line checker is talking about
-        chars = self.get_line(line, editwin.text)
+        uses_tabs, chars = self.get_line_replace_tabs(line, editwin.text)
 
         # Figure out line indent
         indent = get_line_indent(chars)
 
         # Add comment line
         chars = self.get_comment_line(indent, msg) + "\n" + chars
+        if uses_tabs:
+            chars = self.reinstate_char_tabs(chars)
 
         # Save changes
         start, end = get_line_selection(line)
@@ -547,14 +621,15 @@ class BaseExtension:
         If none of the comment pointers are going to be visible
         with the comment prefix, returns None.
 
-        Messages must all be on the same line and be in the same file
+        Messages must all be on the same line and be in the same file,
+        otherwise ValueError is raised.
         """
         line = comments[0].line
         file = comments[0].file
 
         # Figure out next line intent
         next_line_text = self.get_line(line + 1)
-        indent = get_line_indent(next_line_text)
+        _uses_tabs, indent = get_line_indent_handle_tabs(next_line_text)
 
         lastcol = len(self.get_comment_line(indent, ""))
 
@@ -617,6 +692,8 @@ class BaseExtension:
 
         Changes are wrapped in an undo block.
         """
+        if not lines:
+            return []
         file_comments = self.add_comments(
             [
                 Comment(
@@ -627,7 +704,7 @@ class BaseExtension:
                 for line in lines
             ],
         )
-        return file_comments[file]
+        return file_comments.get(file, [])
 
     def remove_selected_extension_comments(self) -> bool:
         """Remove selected extension comments. Return if removed any comments.

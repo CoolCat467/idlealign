@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-# Copyright (C) 2022-2024  CoolCat467
+# Copyright (C) 2022-2025  CoolCat467
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -173,7 +173,7 @@ class AlignDialog(SearchDialogBase):  # type: ignore[misc,unused-ignore]
 
         pattern = self.engine.getprog()
         if not pattern:
-            return False  # type: ignore[unreachable,unused-ignore]
+            return False
 
         space_wrap: bool = self.space_wrap_var.get()
         align_side: bool = self.align_side_var.get()
