@@ -1,7 +1,7 @@
 # IDLEAlign
 Python IDLE extension to align code by a regular expression
 
-[![Tests](https://github.com/CoolCat467/idlealign/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/CoolCat467/idlemypyextension/actions/workflows/tests.yml)
+[![CI](https://github.com/CoolCat467/idlealign/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CoolCat467/idlealign/actions/workflows/ci.yml)
 <!-- BADGIE TIME -->
 
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/CoolCat467/idlealign/main.svg)](https://results.pre-commit.ci/latest/github/CoolCat467/idlealign/main)
