@@ -36,19 +36,20 @@ keywords = ["align", "regex", "idle", "extension", "development"]
 version = {attr = "idlealign.__init__.__version__"}
 
 [project.optional-dependencies]
-user = ["idleuserextend~=0.0.2"]
+user = ["idleuserextend~=0.0.3"]
 tests = [
     "pytest>=5.0",
     "pytest-cov>=6.0.0",
     "coverage>=7.2.5",
     "uv>=0.5.21",
-    "mypy>=1.14.1",
 ]
 tools = [
     "ruff>=0.9.2",
     "codespell>=2.3.0",
     "pre-commit>=4.2.0",
     "attrs>=25.3.0",
+    "mypy>=1.17.0",
+    "types-idlelib>=0.0.0",
 ]
 
 [project.urls]
@@ -65,9 +66,12 @@ idlealign = ["py.typed"]
 package = true
 
 [tool.mypy]
-files = ["src/idlealign/",]
-mypy_path = "stubs"
-enable_error_code = ["truthy-bool", "mutable-override"]
+files = ["src/idlealign/", "tests"]
+enable_error_code = [
+    "truthy-bool",
+    "mutable-override",
+    "exhaustive-match",
+]
 show_column_numbers = true
 show_error_codes = true
 show_traceback = true
