@@ -24,6 +24,7 @@ __title__ = "extension-utils"
 __author__ = "CoolCat467"
 __license__ = "GNU General Public License Version 3"
 
+import importlib
 import sys
 import time
 import traceback
@@ -34,17 +35,17 @@ from idlelib.config import idleConf
 from os.path import abspath
 from pathlib import Path
 from tkinter import TclError, Text, Tk, messagebox
-from typing import TYPE_CHECKING, ClassVar, NamedTuple, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Literal, NamedTuple, TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Sequence
+    from collections.abc import Callable, Generator, Iterable, Sequence
     from idlelib.editor import EditorWindow
     from idlelib.format import FormatRegion
     from idlelib.iomenu import IOBinding
     from idlelib.pyshell import PyShellEditorWindow, PyShellFileList
     from idlelib.undo import UndoDelegator
 
-    from typing_extensions import ParamSpec
+    from typing_extensions import ParamSpec, Self
 
     PS = ParamSpec("PS")
 
@@ -62,7 +63,7 @@ def set_title(title: str) -> None:
 
 def get_required_config(
     values: dict[str, str],
-    bind_defaults: dict[str, str],
+    bind_defaults: dict[str, str | None],
     extension_title: str,
 ) -> str:
     """Get required configuration file data."""
@@ -79,7 +80,9 @@ def get_required_config(
             config += "\n"
     # Get key bindings data
     settings = "\n".join(
-        f"{event} = {key}" for event, key in bind_defaults.items()
+        f"{event} = {key}"
+        for event, key in bind_defaults.items()
+        if key is not None
     )
     if settings:
         config += f"\n[{extension_title}_cfgBindings]\n{settings}"
@@ -89,7 +92,7 @@ def get_required_config(
 def check_installed(
     extension: str,
     version: str,
-    cls: type[BaseExtension] | None,
+    cls: type[BaseExtension] | None = None,
 ) -> bool:
     """Make sure extension installed. Return True if installed correctly."""
     # Get list of system extensions
@@ -108,31 +111,31 @@ def check_installed(
 
     if cls is None:
         # Import extension
-        module = __import__(extension)
+        module = importlib.import_module(extension)
 
         # Get extension class
         if not hasattr(module, extension):
             print(
-                f"ERROR: Somehow, {__title__} was installed improperly, "
-                f"no {__title__} class found in module. Please report "
+                f"ERROR: Somehow, {extension} was installed improperly, "
+                f"no {extension} class found in module. Please report "
                 "this on github.",
                 file=sys.stderr,
             )
-            sys.exit(1)
+            return False
 
         cls = getattr(module, extension)
-    if not issubclass(cls, BaseExtension):
-        raise ValueError(f"Expected BaseExtension subclass, got {cls!r}")
-
-    # Get extension class keybinding defaults
-    required_config = get_required_config(
-        getattr(cls, "values", {}),
-        getattr(cls, "bind_defaults", {}),
-        extension,
-    )
+    # if not issubclass(cls, BaseExtension):
+    #     raise ValueError(f"Expected BaseExtension subclass, got {cls!r}")
 
     # If this extension not in there,
     if extension not in extensions:
+        # Get extension class keybinding defaults
+        required_config = get_required_config(
+            getattr(cls, "values", {}),
+            getattr(cls, "bind_defaults", {}),
+            extension,
+        )
+
         # Tell user how to add it to system list.
         print(f"{extension} not in system registered extensions!")
         print(
@@ -206,7 +209,7 @@ def highlight_region(text: Text, tag: str, first: str, last: str) -> None:
         text.tag_add(tag, first, last)
 
 
-def show_hit(text: Text, first: str, last: str) -> None:
+def show_hit(text: Text, first: str, last: str, tag: str = "hit") -> None:
     """Highlight text between first and last indices.
 
     Indexes are formatted as `{line}.{col}` strings.
@@ -223,7 +226,7 @@ def show_hit(text: Text, first: str, last: str) -> None:
     beforehand.
     """
     text.tag_remove("sel", "1.0", "end")
-    highlight_region(text, "hit", first, last)
+    highlight_region(text, tag, first, last)
 
     set_insert_and_move(text, first)
 
@@ -266,11 +269,12 @@ def ensure_section_exists(section: str) -> bool:
 
 def ensure_values_exist_in_section(
     section: str,
-    values: dict[str, str],
+    values: dict[str, str | None] | dict[str, str],
 ) -> bool:
     """For each key in values, make sure key exists. Return if edited.
 
-    If not, create and set to value.
+    If key does not exist and default value is not None, create and set
+    to value.
     """
     need_save = False
     for key, default in values.items():
@@ -280,14 +284,17 @@ def ensure_values_exist_in_section(
             key,
             warn_on_default=False,
         )
-        if value is None:
+        if value is None and default is not None:
             idleConf.SetOption("extensions", section, key, default)
             need_save = True
     return need_save
 
 
 def ask_save_dialog(parent: Text) -> bool:
-    """Ask to save dialog stolen from idlelib.runscript.ScriptBinding."""
+    """Ask to save dialog. Return if ok to save.
+
+    Stolen from idlelib.runscript.ScriptBinding.
+    """
     msg = "Source Must Be Saved\n" + 5 * " " + "OK to Save?"
     confirm: bool = messagebox.askokcancel(
         title="Save Before Run or Check",
@@ -359,7 +366,7 @@ def temporary_overwrite(
 
 
 def extension_log(content: str) -> None:
-    """Log content to extension log."""
+    """Log content to extension log file."""
     if not LOGS_PATH.exists():
         LOGS_PATH.mkdir(exist_ok=True)
     log_file = LOGS_PATH / f"{TITLE}.log"
@@ -394,6 +401,21 @@ def log_exceptions(function: Callable[PS, T]) -> Callable[PS, T]:
     return wrapper
 
 
+def log_exceptions_catch(function: Callable[PS, T]) -> Callable[PS, T | None]:
+    """Log and catch any exceptions raised."""
+
+    @wraps(function)
+    def wrapper(*args: PS.args, **kwargs: PS.kwargs) -> T | None:
+        """Catch Exceptions, log them to log file. Return None on error."""
+        try:
+            return function(*args, **kwargs)
+        except Exception as exc:
+            extension_log_exception(exc)
+            return None
+
+    return wrapper
+
+
 class Comment(NamedTuple):
     """Represents one comment."""
 
@@ -403,6 +425,106 @@ class Comment(NamedTuple):
     line_end: int | None = None
     column: int = 0
     column_end: int | None = None
+
+    def get_full_span(self) -> tuple[int, int, int, int]:
+        """Return full span as tuple of (line, col, end_line, end_col)."""
+        return (
+            self.line,
+            self.column,
+            self.line_end if self.line_end is not None else self.line,
+            self.column_end if self.column_end is not None else self.column,
+        )
+
+    def replace_content(self, contents: str) -> Self:
+        """Return comment with same data except contents."""
+        return self._replace(contents=contents)
+
+
+def int_default(text: str, default: int = 0) -> int:
+    """Return text as int or default if there is a ValueError."""
+    try:
+        return int(text)
+    except ValueError:
+        return default
+
+
+class FilePosition(NamedTuple):
+    """File Position."""
+
+    path: str
+    line: int
+    col: int
+    line_end: int
+    col_end: int
+
+    def is_range(self) -> bool:
+        """Return True if file position covers a range."""
+        return self.line != self.line_end or self.col != self.col_end
+
+    def as_select(self) -> tuple[str, str]:
+        """Return text selection region index strings."""
+        return f"{self.line}.{self.col}", f"{self.line_end}.{self.col_end}"
+
+    def delta_column(self, delta: int = -1) -> Self:
+        """Return position but with delta added to column."""
+        return self._replace(col=self.col + delta)
+
+    @classmethod
+    def parse(cls, file_position: str) -> Self:
+        """Parse file position string."""
+        line = 0
+        line_end = 0
+        col = 0
+        col_end = 0
+
+        windows_drive_letter = ""
+        if sys.platform == "win32":
+            windows_drive_letter, file_position = file_position.split(":", 1)
+            windows_drive_letter += ":"
+        position = file_position.rsplit(":", 5)
+
+        filename = position[0]
+        if len(position) > 1:
+            line = int_default(position[1])
+            line_end = line
+        if len(position) > 2:
+            col = int_default(position[2])
+            col_end = col
+        if len(position) > 4:
+            line_end = int_default(position[3], line_end)
+            col_end = int_default(position[4], col_end)
+
+        # If line end is before beginning, swap.
+        if line_end < line:
+            line, line_end = line_end, line
+            col, col_end = col_end, col
+
+        return cls(
+            path=f"{windows_drive_letter}{filename}",
+            line=line,
+            col=col,
+            line_end=line_end,
+            col_end=col_end,
+        )
+
+    def serialize(self) -> str:
+        """Return file position as string."""
+        if self.is_range():
+            return f"{self.path}:{self.line}:{self.col}:{self.line_end}:{self.col_end}"
+        if self.col != 0:
+            return f"{self.path}:{self.line}:{self.col}"
+        return f"{self.path}:{self.line}"
+
+    @classmethod
+    def from_editor_current(cls, editwin: PyShellEditorWindow) -> Self | None:
+        """Return file position from editwin current position."""
+        current_filename = editwin.io.filename
+        if current_filename is None:
+            return None
+        current_filename = str(Path(current_filename).absolute())
+        selected = get_selected_text_indexes(editwin.text)
+        select_string = (":".join(selected)).replace(".", ":")
+        return cls.parse(f"{current_filename}:{select_string}")
 
 
 class BaseExtension:
@@ -419,17 +541,19 @@ class BaseExtension:
     )
 
     # Extend the file and format menus.
-    menudefs: ClassVar = []
+    menudefs: ClassVar[
+        Sequence[tuple[str, Sequence[tuple[str, str] | None]]]
+    ] = ()
 
     # Default values for configuration file
-    values: ClassVar = {
+    values: ClassVar[dict[str, str]] = {
         "enable": "True",
         "enable_editor": "True",
         "enable_shell": "False",
     }
 
     # Default key binds for configuration file
-    bind_defaults: ClassVar = {}
+    bind_defaults: ClassVar[dict[str, str | None]] = {}
 
     def __init__(
         self,
@@ -449,9 +573,92 @@ class BaseExtension:
             comment_prefix = f"{self.__class__.__name__}"
         self.comment_prefix = f"# {comment_prefix}: "
 
+        self.bind_non_keyboard(self.bind_defaults)
+
     def __repr__(self) -> str:
         """Return representation of self."""
         return f"{self.__class__.__name__}({self.editwin!r})"
+
+    def bind_non_keyboard(self, bind_defaults: dict[str, str | None]) -> None:
+        """Bind non-keyboard triggered events.
+
+        IDLE only binds keyboard events automatically.
+        """
+        for bind_name, key in bind_defaults.items():
+            if key is not None:
+                continue
+            bind_func_name = bind_name.replace("-", "_") + "_event"
+            if not hasattr(self, bind_func_name):
+                raise ValueError(f"Missing function {bind_func_name}")
+            bind_func = getattr(self, bind_func_name)
+            if not callable(bind_func):
+                raise ValueError(f"{bind_func_name} should be callable")
+            self.text.bind(f"<<{bind_name}>>", bind_func)
+
+    def get_rightclick_menu_labels(self) -> list[str | None]:
+        """Return rightclick menu labels."""
+        return [entry[0] for entry in self.editwin.rmenu_specs]
+
+    def register_rightclick_menu_entry(
+        self,
+        label: str,
+        event_name: str,
+        verify_function: Callable[[], bool] | None = None,
+    ) -> None:
+        """Register a rightclick menu entry.
+
+        Arguments:
+        label: str
+            Text to display.
+        event_name: str
+            Event to raise when entry is selected.
+        verify_function: Callable[[], bool] | None
+            Optional function to determine if this entry should
+            be enabled or not. Returns True if should be enabled.
+
+        Skips adding if label already in right click menu labels.
+
+        """
+        if label in self.get_rightclick_menu_labels():
+            return
+
+        entry: tuple[str, str, str | None]
+        if verify_function is None:
+            entry = (label, event_name, None)
+        else:
+            # Technically can be "normal", "disabled", or "active",
+            # where "active" sets it to like it's being hovered
+            # but we will say no.
+            # Normal is standard unlit, disabled is disabled.
+            @wraps(verify_function)
+            def verify_state_return_wrap() -> Literal["normal" | "disabled"]:
+                return "normal" if verify_function() else "disabled"
+
+            # wacky thing, idlelib.editor.right_menu_event does
+            # `state = getattr(self, verify_state)()`
+            # so needs to be an attribute on editor object.
+            attr_name = f"_rmenu_verify_function_{label.lower()}"
+            setattr(self.editwin, attr_name, verify_state_return_wrap)
+
+            entry = (label, event_name, attr_name)
+        self.editwin.rmenu_specs.append(entry)
+
+    def register_rightclick_menu_entries(
+        self,
+        entries: Iterable[tuple[str, str, Callable[[], bool] | None]],
+    ) -> None:
+        """Register multiple rightclick menu entries.
+
+        Entries are a series of (label, event_name, verify_function) tuples.
+
+        See register_rightclick_menu_entry for more information.
+        """
+        for label, event_name, verify_function in entries:
+            self.register_rightclick_menu_entry(
+                label,
+                event_name,
+                verify_function,
+            )
 
     @classmethod
     def ensure_bindings_exist(cls) -> bool:
@@ -621,6 +828,9 @@ class BaseExtension:
         If none of the comment pointers are going to be visible
         with the comment prefix, returns None.
 
+        Does not handle comments that span multiple lines, assumes
+        comments are all comment.line
+
         Messages must all be on the same line and be in the same file,
         otherwise ValueError is raised.
         """
@@ -712,7 +922,7 @@ class BaseExtension:
         Changes are wrapped in an undo block.
         """
         # Get selected region lines
-        head, _tail, chars, lines = self.formatter.get_region()
+        head, _tail, _chars, lines = self.formatter.get_region()
         region_start, _col = get_line_col(head)
 
         edited = False

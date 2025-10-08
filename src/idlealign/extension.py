@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from idlealign import utils
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from re import Pattern
 
 
@@ -206,7 +207,9 @@ class idlealign(utils.BaseExtension):  # noqa: N801
     __slots__ = ()
 
     # Extend the file and format menus.
-    menudefs: ClassVar = [
+    menudefs: ClassVar[
+        Sequence[tuple[str, Sequence[tuple[str, str] | None]]]
+    ] = [
         ("format", [("Align Selection", "<<align-selection>>")]),
     ]
 
